@@ -1,0 +1,27 @@
+[
+  {
+    "id": "post1",
+    "author": "user_alex",
+    "text": "Did you know the Great Wall of China is visible from space with the naked eye?"
+  },
+  {
+    "id": "post2",
+    "author": "skeptic_sam",
+    "text": "Is it true that humans only use 10% of their brain?"
+  },
+  {
+    "id": "post3",
+    "author": "casual_joe",
+    "text": "I love pizza so much, ordering some right now lol"
+  },
+  {
+    "id": "post4",
+    "author": "newsy_nina",
+    "text": "I heard 5G towers were linked to spreading COVID-19, is that real?"
+  },
+  {
+    "id": "post5",
+    "author": "history_buff",
+    "text": "Napoleon Bonaparte was actually quite short for his time, around 5'2\"."
+  }
+]
