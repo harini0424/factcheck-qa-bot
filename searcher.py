@@ -11,8 +11,10 @@ def search_claim(claim_text):
     Searches the web for information related to the claim/question.
     Returns a list of result snippets with their source URLs.
     """
+    safe_query = claim_text[:390]  # Tavily's limit is 400 chars, leave a small buffer
+
     response = client.search(
-        query=claim_text,
+        query=safe_query,
         max_results=3,
     )
 

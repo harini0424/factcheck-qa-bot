@@ -3,6 +3,7 @@ from datetime import datetime
 from detector import detect_claim
 from searcher import search_claim
 from responder import generate_response
+from feed import get_recent_posts
 
 
 def run_bot(feed_path="sample_posts.json", log_path="bot_replies_log.json"):
@@ -61,10 +62,8 @@ def get_already_processed_ids(log_path="bot_replies_log.json"):
     except FileNotFoundError:
         return set()
 
-
-def run_bot(feed_path="sample_posts.json", log_path="bot_replies_log.json"):
-    with open(feed_path, "r") as f:
-        posts = json.load(f)
+def run_bot(log_path="bot_replies_log.json"):
+    posts = get_recent_posts(limit=5)
 
     processed_ids = get_already_processed_ids(log_path)
     log = []

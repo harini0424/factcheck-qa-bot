@@ -22,7 +22,10 @@ def get_recent_posts(limit=5, hashtag="news"):
 
     posts = []
     for status in timeline:
-        clean_text = re.sub(r"<[^>]+>", "", status["content"])
+        clean_text = re.sub(r"<[^>]+>", "", status["content"])  # strip HTML tags
+        clean_text = re.sub(r"https?://\S+", "", clean_text)     # strip URLs
+        clean_text = re.sub(r"#\w+", "", clean_text)              # strip hashtags
+        clean_text = clean_text.strip()
         posts.append({
             "id": str(status["id"]),
             "author": status["account"]["username"],
