@@ -13,6 +13,7 @@ The bot works as a 3-stage pipeline, repeated for every post:
 1. **Claim Detection** (`detector.py`) — Uses an LLM (via Groq, running Llama 3.3) with few-shot prompting to classify whether a post contains a factual claim or question worth verifying, or is just casual conversation that should be ignored.
 2. **Web Search / Retrieval** (`searcher.py`) — For posts flagged as claims, the bot queries the Tavily Search API to retrieve real, current web sources relevant to the claim.
 3. **Summarization / Response Generation** (`responder.py`) — The retrieved search snippets are fed back into the LLM (Groq), which generates a short, natural-sounding reply stating whether the claim is true/false/partly true, grounded in the retrieved sources.
+4. **Live Feed & Reply Posting** (`feed.py`) — Pulls real, live public posts from Mastodon (via hashtag timeline search), filtered to English-only. Generated replies are posted back live on Mastodon as genuine threaded replies to the original posts — the bot doesn't just analyze text, it actually responds publicly on a real platform.
 
 This retrieve-then-generate pattern is known as **RAG (Retrieval-Augmented Generation)** — it ensures the bot's answers are based on real, current web data rather than the LLM's own (potentially outdated or hallucinated) knowledge.
 
@@ -21,11 +22,13 @@ This retrieve-then-generate pattern is known as **RAG (Retrieval-Augmented Gener
 - **Polling loop** — re-checks the feed every 15 seconds, simulating real-time monitoring of a live social media stream.
 - **Logging** — saves every decision and reply (with timestamps) to `bot_replies_log.json`.
 
-### Why a simulated feed instead of live Reddit?
+### Why Mastodon instead of Reddit?
 
 This bot was originally designed to monitor Reddit via its public API (using `PRAW`). However, Reddit introduced a new **"Responsible Builder Policy"** in 2026, which now requires explicit approval before any new API keys are issued — this approval process wasn't feasible to obtain within the project deadline.
 
-To work around this, the bot reads from a local `sample_posts.json` file that mimics a real social media feed (containing a mix of factual claims, questions, and casual chat). All core logic — detection, search, summarization, deduplication, polling — is identical to what would be used with a live feed. **Swapping in live Reddit data only requires replacing the feed-reading function** with a PRAW-based equivalent; no other code needs to change.
+Instead, the bot connects to **Mastodon** — a real, live, decentralized social media platform with a genuinely open API (instant API access, no approval process, free). The bot monitors Mastodon's `#news` hashtag timeline (the server used, mastodon.social, has its general public timeline disabled by admin policy, so hashtag search is used instead), filters to English-language posts, and **posts real fact-checked replies live** back onto the platform using the same account.
+
+This is a true real-time, live-platform implementation — not a simulation. An earlier version of this project (see commit history) used a local JSON file to simulate a feed during initial development before Mastodon integration was completed; that approach is preserved in the commit history to show the project's development progression.
 
 ## 🛠️ Tech Stack
 
