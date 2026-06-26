@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 from detector import detect_claim
 from searcher import search_claim
-from responder import generate_response
+from responder import generate_response, extract_verdict
 from feed import get_recent_posts, post_reply
 
 DRY_RUN = True  # Set to False when you're ready to actually post replies live
@@ -19,8 +19,8 @@ def get_already_processed_ids(log_path="bot_replies_log.json"):
         return set()
 
 
-def run_bot(log_path="bot_replies_log.json"):
-    posts = get_recent_posts(limit=5)
+def run_bot(log_path="bot_replies_log.json", hashtag="news"):
+    posts = get_recent_posts(limit=5, hashtag=hashtag)
 
     processed_ids = get_already_processed_ids(log_path)
     log = []
@@ -42,6 +42,8 @@ def run_bot(log_path="bot_replies_log.json"):
             "text": post["text"],
             "needed_check": needs_check,
             "reply": None,
+            "verdict": None,
+            "sources": [],
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -60,9 +62,13 @@ def run_bot(log_path="bot_replies_log.json"):
 
         print("→ Generating fact-checked reply...")
         reply = generate_response(post["text"], results)
-        entry["reply"] = reply
+        verdict = extract_verdict(reply)
 
-        print(f"\n🤖 Bot reply: {reply}")
+        entry["reply"] = reply
+        entry["verdict"] = verdict
+        entry["sources"] = [r["url"] for r in results][:3]
+
+        print(f"\n🤖 Bot reply ({verdict}): {reply}")
 
         if DRY_RUN:
             print("   (DRY_RUN is True — not actually posting to Mastodon)")
@@ -76,7 +82,6 @@ def run_bot(log_path="bot_replies_log.json"):
         print("No new posts to process. (Bot is up to date.)")
         return
 
-    # Append new results to existing log instead of overwriting
     existing_log = []
     try:
         with open(log_path, "r") as f:

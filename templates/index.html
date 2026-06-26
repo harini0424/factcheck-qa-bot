@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fact-Check Bot Dashboard</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="20">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #0f1117;
+            color: #e4e6eb;
+        }
+        h1 { font-size: 28px; margin-bottom: 4px; }
+        .subtitle { color: #8b92a8; margin-bottom: 30px; }
+        .card {
+            background: #1a1d27;
+            border: 1px solid #2a2e3a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .card h2 {
+            font-size: 16px;
+            margin-top: 0;
+            margin-bottom: 14px;
+            color: #a8b0c4;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #6364ff, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 12px 22px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        .btn:hover { opacity: 0.85; }
+        .btn-small { padding: 6px 14px; font-size: 13px; }
+        .btn-danger { background: #ef4444; background-image: none; }
+        .btn-muted { background: #3a3f4f; background-image: none; }
+        input[type="text"] {
+            background: #11131c;
+            border: 1px solid #2a2e3a;
+            color: #e4e6eb;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .row { display: flex; gap: 10px; align-items: center; }
+        .row input[type="text"] { margin-bottom: 0; }
+        .entry {
+            background: #1a1d27;
+            border: 1px solid #2a2e3a;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+        .author { font-weight: 600; color: #b8c0ff; font-size: 14px; }
+        .text { margin-top: 6px; color: #cfd3e0; }
+        .reply {
+            margin-top: 12px;
+            padding: 12px 14px;
+            background: #16291f;
+            border-left: 3px solid #34c779;
+            border-radius: 6px;
+            color: #c8f0d8;
+        }
+        .skipped { margin-top: 10px; color: #6b7280; font-style: italic; font-size: 13px; }
+        .timestamp { font-size: 11px; color: #5a6072; margin-top: 8px; }
+        .error-box {
+            background: #2a1518;
+            border-left: 3px solid #ef4444;
+            color: #fca5a5;
+            padding: 12px 14px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+        .empty { color: #6b7280; font-size: 14px; }
+        .actions { display: flex; gap: 8px; margin-top: 10px; }
+        .actions form { display: inline; }
+        .card-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .card-header-row h2 { margin-bottom: 0; }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .badge-true { background: #16291f; color: #34c779; }
+        .badge-false { background: #2a1518; color: #ef4444; }
+        .badge-partlytrue { background: #2a2415; color: #facc15; }
+        .badge-unknown { background: #20232e; color: #8b92a8; }
+
+        .sources { margin-top: 8px; font-size: 12px; }
+        .sources a { color: #8b9cff; text-decoration: none; margin-right: 10px; }
+        .sources a:hover { text-decoration: underline; }
+
+        .stats-row { display: flex; gap: 16px; flex-wrap: wrap; }
+        .stat-box {
+            background: #11131c;
+            border: 1px solid #2a2e3a;
+            border-radius: 8px;
+            padding: 10px 16px;
+            text-align: center;
+            flex: 1;
+        }
+        .stat-num { font-size: 22px; font-weight: 700; }
+        .stat-label { font-size: 11px; color: #8b92a8; text-transform: uppercase; margin-top: 2px; }
+    </style>
+</head>
+<body>
+    <h1>🤖 Fact-Check &amp; Q&amp;A Bot</h1>
+    <div class="subtitle">Live monitoring &amp; verification dashboard — powered by Groq + Tavily + Mastodon</div>
+
+    <div class="card">
+        <h2>Stats</h2>
+        <div class="stats-row">
+            <div class="stat-box"><div class="stat-num">{{ stats.total }}</div><div class="stat-label">Total</div></div>
+            <div class="stat-box"><div class="stat-num" style="color:#34c779">{{ stats.true }}</div><div class="stat-label">True</div></div>
+            <div class="stat-box"><div class="stat-num" style="color:#ef4444">{{ stats.false }}</div><div class="stat-label">False</div></div>
+            <div class="stat-box"><div class="stat-num" style="color:#facc15">{{ stats.partly }}</div><div class="stat-label">Partly True</div></div>
+            <div class="stat-box"><div class="stat-num" style="color:#8b92a8">{{ stats.skipped }}</div><div class="stat-label">Skipped</div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Monitor Live Feed</h2>
+        <form method="POST" action="/run" class="row">
+            <input type="text" name="hashtag" placeholder="Hashtag to monitor (default: news)">
+            <button class="btn" type="submit">▶ Run Bot Now</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Check a Specific Post</h2>
+        <form method="POST" action="/check">
+            <input type="text" name="post_id" placeholder="Paste a Mastodon post URL or ID">
+            <button class="btn" type="submit">🔍 Verify This Post</button>
+        </form>
+
+        {% if check_error %}
+            <div class="error-box">{{ check_error }}</div>
+        {% endif %}
+
+        {% if check_result %}
+            <div class="entry">
+                <div class="author">{{ check_result.author }}</div>
+                <div class="text">{{ check_result.text }}</div>
+                {% if check_result.reply %}
+                    <div class="badge badge-{{ check_result.verdict|lower|replace(' ', '') }}">{{ check_result.verdict }}</div>
+                    <div class="reply">{{ check_result.reply }}</div>
+                    {% if check_result.sources %}
+                        <div class="sources">
+                            Sources:
+                            {% for url in check_result.sources %}
+                                <a href="{{ url }}" target="_blank">[{{ loop.index }}]</a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="skipped">— No factual claim detected in this post —</div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header-row">
+            <h2>Recent Activity ({{ log|length }})</h2>
+            {% if log|length > 0 %}
+            <form method="POST" action="/clear" onsubmit="return confirm('Delete ALL activity? This cannot be undone.');">
+                <button class="btn btn-small btn-danger" type="submit">🗑 Clear All</button>
+            </form>
+            {% endif %}
+        </div>
+
+        {% if log|length == 0 %}
+            <p class="empty">No activity yet. Click "Run Bot Now" to check for new posts.</p>
+        {% endif %}
+
+        {% for entry in log %}
+            <div class="entry">
+                <div class="author">{{ entry.author }}</div>
+                <div class="text">{{ entry.text }}</div>
+                <div class="timestamp">{{ entry.timestamp }}</div>
+
+                {% if entry.reply %}
+                    <div class="badge badge-{{ entry.verdict|lower|replace(' ', '') }}">{{ entry.verdict }}</div>
+                    <div class="reply">{{ entry.reply }}</div>
+                    {% if entry.sources %}
+                        <div class="sources">
+                            Sources:
+                            {% for url in entry.sources %}
+                                <a href="{{ url }}" target="_blank">[{{ loop.index }}]</a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="skipped">— No factual claim detected, skipped —</div>
+                {% endif %}
+
+                <div class="actions">
+                    <form method="POST" action="/check">
+                        <input type="hidden" name="post_id" value="{{ entry.post_id }}">
+                        <button class="btn btn-small" type="submit">🔍 Re-check</button>
+                    </form>
+                    <form method="POST" action="/delete" onsubmit="return confirm('Delete this entry?');">
+                        <input type="hidden" name="post_id" value="{{ entry.post_id }}">
+                        <button class="btn btn-small btn-muted" type="submit">🗑 Delete</button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
