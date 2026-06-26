@@ -1,120 +1,101 @@
 # Fact-Check & Q&A Social Media Bot
 
-A Generative AI–powered bot that monitors live social media posts, detects factual claims or questions, verifies them using web search, and responds with concise, fact-checked information — combining LLM reasoning with retrieval-augmented generation (RAG) to combat misinformation in real time.
+This is a bot that watches live posts on social media, figures out which ones are making a factual claim (vs. just casual chat), checks those claims against real web sources, and replies with a short, honest verdict — TRUE, FALSE, or PARTLY TRUE. It also has a small web dashboard so you can run it, watch what it's doing, and manually check any post you want.
 
-Includes a Flask web dashboard for live monitoring, manual post verification, and activity management.
+Built for the assignment: develop a bot that monitors posts, identifies claims/questions, and responds with verified info using web search + LLM summarization, to help fight misinformation.
 
-## 📋 Problem Statement
+## How it actually works
 
-Develop a social media bot that monitors public posts and comments, identifies factual claims or questions, and responds with concise, verified information using web search and LLM-based summarization, fostering informed conversations and combating misinformation.
+There are four pieces, and each one does one job:
 
-## 🧠 Approach & Architecture
+**1. Getting posts — `feed.py`**
+Pulls real, live posts off Mastodon, searched by hashtag (currently `#news` by default). I filter out non-English posts using Mastodon's language tag (not perfect — some posts mislabel their language, so a few non-English ones slip through sometimes).
 
-The bot runs a 4-stage pipeline for every post:
+**2. Deciding if a post is worth checking — `detector.py`**
+Most posts on social media are just people talking, not making claims. This step asks an LLM (Groq, running Llama 3.3) a simple question: does this post contain something checkable? I had to fix this with a few examples in the prompt early on — without them, the model was way too conservative and said "no" to almost everything, even obvious claims like "the Great Wall is visible from space."
 
-1. **Live Feed** (`feed.py`) — Pulls real, live public posts from **Mastodon** (via hashtag timeline search, e.g. `#news`), filtered to English-language posts. Also supports fetching a single specific post by ID/URL for manual verification.
-2. **Claim Detection** (`detector.py`) — Uses an LLM (via Groq, running Llama 3.3) with few-shot prompting to classify whether a post contains a factual claim or question worth verifying, or is just casual conversation to ignore.
-3. **Web Search / Retrieval** (`searcher.py`) — For flagged posts, queries the **Tavily Search API** to retrieve real, current web sources relevant to the claim.
-4. **Summarization / Response Generation** (`responder.py`) — Retrieved search snippets are fed back into the LLM (Groq), which generates a short, natural reply stating whether the claim is TRUE, FALSE, or PARTLY TRUE, grounded in the retrieved sources. A verdict is also extracted for UI display.
+**3. Actually checking it — `searcher.py`**
+For anything flagged as a claim, this calls the Tavily search API and pulls back a few real web results.
 
-This retrieve-then-generate pattern is **RAG (Retrieval-Augmented Generation)** — it ensures the bot's answers are based on real, current web data rather than the LLM's own (potentially outdated or hallucinated) knowledge.
+**4. Writing the reply — `responder.py`**
+Feeds those search results back into the LLM and asks it to write a short, natural reply with a verdict. This is the "RAG" part (retrieval-augmented generation) — the LLM isn't guessing from memory, it's basing the answer on what was actually just found on the web.
 
-`main.py` orchestrates the full pipeline and adds:
-- **Deduplication** — tracks already-processed post IDs so the same post is never answered twice.
-- **Live reply posting** — generated replies are posted back live on Mastodon as genuine threaded replies (toggle via `DRY_RUN`).
-- **Logging** — saves every decision/reply (with verdict, sources, and timestamp) to `bot_replies_log.json`.
+`main.py` ties all of this together, keeps track of which posts it's already replied to (so it doesn't double-reply), and can actually post the generated reply back on Mastodon for real.
 
-### Web Dashboard (`app.py` + `templates/index.html`)
+## The dashboard
 
-A Flask-based dashboard provides:
-- **Run Bot Now** — triggers a live pipeline pass on a chosen hashtag
-- **Check a Specific Post** — paste any Mastodon post URL or ID to verify it on demand, without waiting for the next polling cycle
-- **Verdict badges** — color-coded TRUE / FALSE / PARTLY TRUE indicators
-- **Source links** — clickable references to the web sources used for each verdict
-- **Stats summary** — live counts of total/true/false/partly-true/skipped posts
-- **Auto-refresh** — dashboard reloads periodically to reflect new activity
-- **Re-check / Delete / Clear All** — manage individual entries or the whole log
+I added a small Flask website on top of the bot (`app.py` + `templates/index.html`) because running everything from the terminal only felt limited. From the dashboard you can:
+- Click a button to run the bot on demand, on whatever hashtag you type in
+- Paste any Mastodon post link and check that one specific post immediately
+- See a TRUE/FALSE/PARTLY TRUE badge and the actual source links for every reply
+- See quick stats — how many posts were true, false, etc.
+- Delete or clear entries
+- It also auto-refreshes every 20 seconds so it feels live without you doing anything
 
-### Why Mastodon instead of Reddit?
+## Why Mastodon and not Reddit
 
-This bot was originally designed to monitor Reddit via its public API (using `PRAW`). However, Reddit introduced a new **"Responsible Builder Policy"** in 2026, which now requires explicit approval before any new API keys are issued — not feasible within the project deadline.
+I originally built this to run on Reddit. I got the whole pipeline working with a simulated/sample feed first, then went to actually connect to Reddit's API — and that's when I found out Reddit rolled out a new policy in 2026 (they call it the "Responsible Builder Policy") that requires getting approved before you can even get API keys. That wasn't something I could realistically get done before the deadline.
 
-Instead, the bot connects to **Mastodon** — a real, live, decentralized social platform with a genuinely open API (instant access, no approval process, free). Mastodon.social's general public timeline is disabled by server policy, so the bot uses hashtag-based timeline search instead. This is a true real-time, live-platform implementation — not a simulation. (An earlier development version used a local JSON file to simulate a feed; see commit history for the project's full progression.)
+So I switched to Mastodon instead. It's a real social platform, and unlike Reddit/Twitter, you get full API access instantly for free — no approval queue. One annoying thing I ran into: the server I'm using (mastodon.social) has its general public timeline turned off by the admins, so I had to switch to pulling posts by hashtag instead, which works fine.
 
-## 🛠️ Tech Stack
+If you look at the commit history, you can see the project actually started with a local JSON file standing in for a feed, before I got the live Mastodon connection working — I kept that history rather than rewriting it, since it shows how the project actually progressed.
 
-| Component | Tool | Purpose |
+## Tech stack
+
+| Piece | Tool | What it's for |
 |---|---|---|
-| LLM | [Groq](https://groq.com) (Llama 3.3 70B) | Claim detection + response summarization |
-| Web Search | [Tavily](https://tavily.com) | Real-time fact retrieval |
-| Social Platform | [Mastodon](https://mastodon.social) | Live post feed + reply posting |
-| Web Framework | Flask | Dashboard UI |
-| Language | Python 3.12 | Core implementation |
+| LLM | Groq (Llama 3.3 70B) | deciding what's a claim + writing the reply |
+| Search | Tavily | pulling real web evidence |
+| Platform | Mastodon | where the posts come from + where replies get posted |
+| Web framework | Flask | the dashboard |
+| Language | Python 3.12 | everything |
 
-## 📂 Project Structure
-## ⚙️ Setup Instructions
+## Project structure
+## Setup
 
-### Prerequisites
-- Python 3.10+
-- A free [Groq](https://console.groq.com) account and API key
-- A free [Tavily](https://tavily.com) account and API key
-- A free [Mastodon](https://mastodon.social) account and an application access token (read + write scopes)
+You'll need Python 3.10+, and free accounts/API keys for Groq, Tavily, and Mastodon.
 
-### Installation
-
-1. Clone this repository:
 ```bash
 git clone https://github.com/harini0424/factcheck-qa-bot.git
 cd factcheck-qa-bot
-```
 
-2. Create and activate a virtual environment:
-```bash
 python -m venv venv
-# Windows:
-.\venv\Scripts\Activate.ps1
-# Mac/Linux:
-source venv/bin/activate
-```
+.\venv\Scripts\Activate.ps1     # Windows
+source venv/bin/activate         # Mac/Linux
 
-3. Install dependencies:
-```bash
 pip install -r requirements.txt
 ```
 
-4. Create a `.env` file in the project root:
-## ▶️ Usage
+Then create a `.env` file in the project folder with:
+## Running it
 
-### Run the web dashboard (recommended)
+**Dashboard (the easier way):**
 ```bash
 python app.py
 ```
-Then open **http://127.0.0.1:5000** in your browser. Use "Run Bot Now" to process live posts, or "Check a Specific Post" to verify any single post by URL/ID.
+Then open http://127.0.0.1:5000 in your browser.
 
-### Run the bot standalone in the terminal (continuous polling)
+**Or run it straight from the terminal**, which loops forever checking for new posts every 15 seconds:
 ```bash
 python main.py
 ```
-Checks the feed every 15 seconds and prints/logs results until stopped (`Ctrl+C`).
 
-### ⚠️ Going live (posting real replies)
-By default, `DRY_RUN = True` in `main.py` — the bot will **not** post anything publicly; it only logs what it would post. Set `DRY_RUN = False` to enable real reply-posting to Mastodon.
+**About posting real replies:** by default `DRY_RUN = True` in `main.py`, so it won't actually post anything — it just shows what it would say. Change it to `False` if you want it to post for real on Mastodon.
 
-### Test individual components
+You can also test each piece on its own:
 ```bash
-python feed.py        # Test live Mastodon feed fetching
-python detector.py     # Test claim detection
-python searcher.py     # Test web search
-python responder.py    # Test full search + response generation
+python feed.py
+python detector.py
+python searcher.py
+python responder.py
 ```
 
-## 🎥 Demo Video
+## Demo video
 
-[Link to unlisted YouTube demo video — add after recording]
+[link goes here once recorded]
 
-## 🚧 Future Improvements
+## Things I'd improve with more time
 
-- Auto-detect post language more reliably (Mastodon's self-reported language tag is occasionally inaccurate)
-- Support additional platforms (e.g. Bluesky) via the same modular feed interface
-- Add authentication for multi-user dashboard access if deployed publicly
-- Rate-limit-aware backoff for sustained production use
+- Better language filtering — Mastodon's language tags aren't always accurate
+- Support other platforms through the same feed structure (Bluesky would be an easy next one)
+- Some kind of rate-limit handling if this ran continuously for a long time
