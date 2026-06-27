@@ -38,8 +38,8 @@ def compute_stats(log):
     stats["false_pct"] = round((stats["false"] / checked) * 100) if checked > 0 else 0
     return stats
 
+
 def compute_trend(log):
-    """Groups entries by date (YYYY-MM-DD) and counts verdicts per day."""
     by_date = defaultdict(lambda: {"true": 0, "false": 0, "partly": 0})
     for entry in log:
         if not entry.get("reply"):
