@@ -1,10 +1,13 @@
 import json
-from flask import Flask, render_template, redirect, url_for, request, session
+import csv
+import io
+from collections import defaultdict
+from flask import Flask, render_template, redirect, url_for, request, session, Response
 from main import run_bot
 from feed import get_post_by_id
 from detector import detect_claim
 from searcher import search_claim
-from responder import generate_response, extract_verdict
+from responder import generate_response, extract_verdict, assess_severity
 
 app = Flask(__name__)
 app.secret_key = "factcheck-bot-secret-key-change-if-needed"
@@ -29,16 +32,46 @@ def compute_stats(log):
             stats["false"] += 1
         elif entry.get("verdict") == "PARTLY TRUE":
             stats["partly"] += 1
+
+    checked = stats["true"] + stats["false"] + stats["partly"]
+    stats["checked"] = checked
+    stats["false_pct"] = round((stats["false"] / checked) * 100) if checked > 0 else 0
     return stats
+
+def compute_trend(log):
+    """Groups entries by date (YYYY-MM-DD) and counts verdicts per day."""
+    by_date = defaultdict(lambda: {"true": 0, "false": 0, "partly": 0})
+    for entry in log:
+        if not entry.get("reply"):
+            continue
+        date = entry.get("timestamp", "")[:10]
+        if not date:
+            continue
+        verdict = entry.get("verdict")
+        if verdict == "TRUE":
+            by_date[date]["true"] += 1
+        elif verdict == "FALSE":
+            by_date[date]["false"] += 1
+        elif verdict == "PARTLY TRUE":
+            by_date[date]["partly"] += 1
+
+    dates = sorted(by_date.keys())
+    return {
+        "dates": dates,
+        "true": [by_date[d]["true"] for d in dates],
+        "false": [by_date[d]["false"] for d in dates],
+        "partly": [by_date[d]["partly"] for d in dates],
+    }
 
 
 @app.route("/")
 def home():
     log = list(reversed(load_log()))
     stats = compute_stats(log)
+    trend = compute_trend(load_log())
     check_result = session.pop("check_result", None)
     check_error = session.pop("check_error", None)
-    return render_template("index.html", log=log, stats=stats, check_result=check_result, check_error=check_error)
+    return render_template("index.html", log=log, stats=stats, trend=trend, check_result=check_result, check_error=check_error)
 
 
 @app.route("/run", methods=["POST"])
@@ -69,6 +102,7 @@ def check():
         "needed_check": needs_check,
         "reply": None,
         "verdict": None,
+        "severity": None,
         "sources": [],
     }
 
@@ -76,8 +110,10 @@ def check():
         results = search_claim(post["text"])
         if results:
             reply = generate_response(post["text"], results)
+            verdict = extract_verdict(reply)
             result["reply"] = reply
-            result["verdict"] = extract_verdict(reply)
+            result["verdict"] = verdict
+            result["severity"] = assess_severity(post["text"], verdict)
             result["sources"] = [r["url"] for r in results][:3]
 
     session["check_result"] = result
@@ -98,6 +134,29 @@ def clear_all():
     with open("bot_replies_log.json", "w") as f:
         json.dump([], f)
     return redirect(url_for("home"))
+
+
+@app.route("/export")
+def export_csv():
+    log = load_log()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["timestamp", "author", "text", "verdict", "severity", "reply", "sources"])
+    for entry in log:
+        writer.writerow([
+            entry.get("timestamp", ""),
+            entry.get("author", ""),
+            entry.get("text", ""),
+            entry.get("verdict", ""),
+            entry.get("severity", ""),
+            entry.get("reply", ""),
+            "; ".join(entry.get("sources", [])),
+        ])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment;filename=factcheck_report.csv"},
+    )
 
 
 if __name__ == "__main__":
