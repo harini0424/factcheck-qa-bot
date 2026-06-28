@@ -89,10 +89,9 @@ python detector.py
 python searcher.py
 python responder.py
 ```
-
-## Demo video
-
-[link goes here once recorded]
+git add README.md
+git commit -m "https://youtu.be/lLBhFemJFyk"
+git push
 
 ## Things I'd improve with more time
 
