@@ -4,335 +4,140 @@
     <title>Fact-Check Bot Dashboard</title>
     <meta charset="UTF-8">
     <meta http-equiv="refresh" content="20">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background: #0a0b0f; color: #1a1d27; }
+        body { font-family: Inter, Arial, sans-serif; background: #0a0b0f; color: #1a1d27; }
 
         .layout { display: flex; min-height: 100vh; }
 
-        /* Sidebar */
         .sidebar {
             width: 220px;
             background: #11131c;
             border-right: 1px solid #1f2230;
             padding: 24px 16px;
-            flex-shrink: 0;
         }
-        .brand { display: flex; align-items: center; gap: 10px; color: #e4e6eb; font-weight: 700; font-size: 16px; margin-bottom: 32px; padding: 0 8px; }
-        .logo-dot { width: 9px; height: 9px; border-radius: 50%; background: #34c779; box-shadow: 0 0 8px #34c779; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        .nav-item {
-            display: flex; align-items: center; gap: 10px;
-            color: #8b92a8; text-decoration: none;
-            padding: 11px 12px; border-radius: 9px;
-            font-size: 14px; font-weight: 500;
-            cursor: pointer; margin-bottom: 4px;
-            transition: background 0.15s, color 0.15s;
-        }
-        .nav-item:hover { background: #1a1d27; color: #e4e6eb; }
-        .nav-item.active { background: #1f2240; color: #b8c0ff; }
-        .sidebar-tags { margin-top: 30px; padding: 14px 12px; background: #161824; border-radius: 10px; font-size: 11px; color: #5a6072; }
-        .sidebar-tags div { margin-bottom: 4px; }
 
-        /* Main area */
-        .main {
-            flex: 1;
-            padding: 32px;
+        .brand { color: #e4e6eb; font-weight: 700; margin-bottom: 30px; }
+
+        .nav-item {
+            padding: 10px;
+            color: #8b92a8;
+            cursor: pointer;
         }
-        .panel {
-            background: #f6f7fb;
-            border-radius: 20px;
-            padding: 32px;
-            color: #1a1d27;
-            min-height: calc(100vh - 64px);
-        }
-        .panel-header { margin-bottom: 24px; }
-        .panel-header h1 { font-size: 24px; font-weight: 800; }
-        .panel-header p { color: #6b7280; font-size: 14px; margin-top: 4px; }
+
+        .nav-item.active { color: #fff; background: #1f2240; border-radius: 8px; }
+
+        .main { flex: 1; padding: 30px; }
+
+        .panel { background: #f6f7fb; padding: 30px; border-radius: 16px; }
 
         .section { display: none; }
         .section.active { display: block; }
-
-        .row-flex { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
-        .card-light {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 22px;
-        }
-        .card-title { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; }
-
-        /* Gauge */
-        .gauge-wrap { text-align: center; flex: 1; min-width: 220px; }
-        .gauge-canvas-box { position: relative; width: 200px; height: 100px; margin: 0 auto; }
-        .gauge-number { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font-size: 26px; font-weight: 800; color: #1a1d27; }
-        .gauge-label { display: flex; justify-content: space-between; font-size: 11px; color: #9ca3af; width: 200px; margin: 4px auto 0; }
-        .gauge-caption { margin-top: 10px; font-size: 13px; color: #6b7280; }
-
-        .stats-row { display: flex; gap: 12px; flex-wrap: wrap; flex: 2; min-width: 280px; }
-        .stat-box { background: #f9fafb; border: 1px solid #eef0f4; border-radius: 12px; padding: 14px; text-align: center; flex: 1; min-width: 80px; }
-        .stat-num { font-size: 22px; font-weight: 800; }
-        .stat-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; margin-top: 3px; }
-
-        .btn { background: linear-gradient(135deg, #6364ff, #9b6cff); color: white; border: none; padding: 12px 22px; font-size: 14px; font-weight: 600; border-radius: 10px; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-block; transition: transform .15s; }
-        .btn:hover { transform: translateY(-1px); }
-        .btn-small { padding: 7px 14px; font-size: 12px; border-radius: 7px; }
-        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
-        .btn-muted { background: #eef0f4; color: #4b5563; }
-
-        input[type="text"] { background: #ffffff; border: 1px solid #e5e7eb; color: #1a1d27; padding: 12px 14px; border-radius: 10px; font-size: 14px; width: 100%; font-family: inherit; }
-        input[type="text"]:focus { outline: none; border-color: #6364ff; }
-        .row { display: flex; gap: 10px; }
-
-        .entry { background: #fafbfc; border: 1px solid #eef0f4; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
-        .author { font-weight: 600; color: #4f53d6; font-size: 13px; }
-        .text { margin-top: 6px; color: #374151; font-size: 14px; }
-        .reply { margin-top: 12px; padding: 12px 14px; background: #f0fdf4; border-left: 3px solid #22c55e; border-radius: 8px; color: #166534; font-size: 14px; }
-        .skipped { margin-top: 10px; color: #9ca3af; font-style: italic; font-size: 13px; }
-        .timestamp { font-size: 11px; color: #c1c5cd; margin-top: 8px; }
-        .error-box { background: #fef2f2; border-left: 3px solid #ef4444; color: #b91c1c; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
-        .empty { color: #9ca3af; font-size: 14px; text-align: center; padding: 20px 0; }
-        .actions { display: flex; gap: 8px; margin-top: 12px; }
-        .card-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-bottom: 8px; margin-right: 6px; }
-        .badge-true { background: #dcfce7; color: #15803d; }
-        .badge-false { background: #fee2e2; color: #b91c1c; }
-        .badge-partlytrue { background: #fef9c3; color: #92400e; }
-        .badge-unknown { background: #f3f4f6; color: #6b7280; }
-        .severity-high { background: #fee2e2; color: #991b1b; }
-        .severity-medium { background: #fef3c7; color: #92400e; }
-        .severity-low { background: #f3f4f6; color: #6b7280; }
-
-        .sources { margin-top: 10px; font-size: 12px; }
-        .sources a { color: #6366f1; text-decoration: none; margin-right: 10px; }
-        .sources a:hover { text-decoration: underline; }
-
-        @media (max-width: 800px) {
-            .sidebar { display: none; }
-        }
     </style>
 </head>
+
 <body>
+
 <div class="layout">
+
     <div class="sidebar">
-        <div class="brand"><span class="logo-dot"></span> FactCheck Bot</div>
-        <div class="nav-item active" data-target="overview" onclick="showSection('overview', this)">📊 Overview</div>
-        <div class="nav-item" data-target="livefeed" onclick="showSection('livefeed', this)">📡 Live Feed</div>
-        <div class="nav-item" data-target="manual" onclick="showSection('manual', this)">🔍 Manual Check</div>
-        <div class="nav-item" data-target="reports" onclick="showSection('reports', this)">📁 Reports</div>
-        <div class="sidebar-tags">
-            <div>⚡ Groq · Llama 3.3</div>
-            <div>🔎 Tavily Search</div>
-            <div>🐘 Mastodon Live</div>
-        </div>
+        <div class="brand">FactCheck Bot</div>
+
+        <div class="nav-item active" onclick="showSection('overview', this)">Overview</div>
+        <div class="nav-item" onclick="showSection('livefeed', this)">Live Feed</div>
+        <div class="nav-item" onclick="showSection('manual', this)">Manual</div>
+        <div class="nav-item" onclick="showSection('reports', this)">Reports</div>
     </div>
 
     <div class="main">
         <div class="panel">
 
             <!-- OVERVIEW -->
-            <div class="section active" id="overview">
-                <div class="panel-header">
-                    <h1>Overview</h1>
-                    <p>Live misinformation monitoring, verified against real web sources</p>
-                </div>
+            <div id="overview" class="section active">
 
-                <div class="row-flex">
-                    <div class="card-light gauge-wrap">
-                        <div class="card-title" style="text-align:left;">Misinformation Rate</div>
-                        <div class="gauge-canvas-box">
-                            <canvas id="riskGauge"></canvas>
-                            <div class="gauge-number">{{ stats.false_pct }}%</div>
-                        </div>
-                        <div class="gauge-label"><span>Low</span><span>High</span></div>
-                        <div class="gauge-caption">% of checked claims found FALSE</div>
-                    </div>
+                <h2>Overview</h2>
 
-                    <div class="card-light" style="flex:2; min-width:280px;">
-                        <div class="card-title">Activity Summary</div>
-                        <div class="stats-row">
-                            <div class="stat-box"><div class="stat-num">{{ stats.total }}</div><div class="stat-label">Total</div></div>
-                            <div class="stat-box"><div class="stat-num" style="color:#16a34a">{{ stats.true }}</div><div class="stat-label">True</div></div>
-                            <div class="stat-box"><div class="stat-num" style="color:#dc2626">{{ stats.false }}</div><div class="stat-label">False</div></div>
-                            <div class="stat-box"><div class="stat-num" style="color:#ca8a04">{{ stats.partly }}</div><div class="stat-label">Partly</div></div>
-                            <div class="stat-box"><div class="stat-num" style="color:#6b7280">{{ stats.skipped }}</div><div class="stat-label">Skipped</div></div>
-                        </div>
-                    </div>
-                </div>
+                <canvas id="riskGauge"></canvas>
 
-                {% if trend.dates|length > 0 %}
-                <div class="card-light">
-                    <div class="card-title">Trend Over Time</div>
-                    <canvas id="trendChart" height="80"></canvas>
-                </div>
-                {% endif %}
+                <p>False %: {{ stats.false_pct }}</p>
+
+                <p>Total: {{ stats.total }}</p>
+
             </div>
 
             <!-- LIVE FEED -->
-            <div class="section" id="livefeed">
-                <div class="panel-header">
-                    <h1>Live Feed</h1>
-                    <p>Pull real posts from Mastodon and fact-check them automatically</p>
-                </div>
-
-                <div class="card-light" style="margin-bottom:20px;">
-                    <form method="POST" action="/run" class="row">
-                        <input type="text" name="hashtag" placeholder="Hashtag to monitor (default: news)">
-                        <button class="btn" type="submit">Run Bot Now</button>
-                    </form>
-                </div>
-
-                <div class="card-header-row">
-                    <div class="card-title" style="margin-bottom:0;">Recent Activity ({{ log|length }})</div>
-                    {% if log|length > 0 %}
-                    <form method="POST" action="/clear" onsubmit="return confirm('Delete ALL activity? This cannot be undone.');">
-                        <button class="btn btn-small btn-danger" type="submit">Clear All</button>
-                    </form>
-                    {% endif %}
-                </div>
-
-                {% if log|length == 0 %}
-                    <p class="empty">No activity yet. Click "Run Bot Now" above.</p>
-                {% endif %}
+            <div id="livefeed" class="section">
+                <h2>Live Feed</h2>
 
                 {% for entry in log %}
-                    <div class="entry">
-                        <div class="author">{{ entry.author }}</div>
-                        <div class="text">{{ entry.text }}</div>
-                        <div class="timestamp">{{ entry.timestamp }}</div>
+                <div style="margin-bottom:15px;">
+                    <b>{{ entry.author }}</b><br>
+                    {{ entry.text }}<br>
+                    <small>{{ entry.timestamp }}</small>
 
-                        {% if entry.reply %}
-                            <div class="badge badge-{{ entry.verdict|lower|replace(' ', '') }}">{{ entry.verdict }}</div>
-                            {% if entry.severity %}<span class="badge severity-{{ entry.severity|lower }}">{{ entry.severity }} RISK</span>{% endif %}
-                            <div class="reply">{{ entry.reply }}</div>
-                            {% if entry.sources %}
-                                <div class="sources">Sources:
-                                    {% for url in entry.sources %}<a href="{{ url }}" target="_blank">[{{ loop.index }}]</a>{% endfor %}
-                                </div>
-                            {% endif %}
-                        {% else %}
-                            <div class="skipped">— No factual claim detected, skipped —</div>
-                        {% endif %}
-
-                        <div class="actions">
-                            <form method="POST" action="/check">
-                                <input type="hidden" name="post_id" value="{{ entry.post_id }}">
-                                <button class="btn btn-small btn-muted" type="submit">Re-check</button>
-                            </form>
-                            <form method="POST" action="/delete" onsubmit="return confirm('Delete this entry?');">
-                                <input type="hidden" name="post_id" value="{{ entry.post_id }}">
-                                <button class="btn btn-small btn-muted" type="submit">Delete</button>
-                            </form>
-                        </div>
-                    </div>
+                    {% if entry.reply %}
+                        <p><b>{{ entry.verdict }}</b></p>
+                        <p>{{ entry.reply }}</p>
+                    {% else %}
+                        <i>No claim detected</i>
+                    {% endif %}
+                </div>
                 {% endfor %}
+
             </div>
 
-            <!-- MANUAL CHECK -->
-            <div class="section" id="manual">
-                <div class="panel-header">
-                    <h1>Manual Check</h1>
-                    <p>Verify any specific Mastodon post on demand</p>
-                </div>
-
-                <div class="card-light">
-                    <form method="POST" action="/check" class="row" style="margin-bottom: 0;">
-                        <input type="text" name="post_id" placeholder="Paste a Mastodon post URL or ID">
-                        <button class="btn" type="submit">Verify</button>
-                    </form>
-
-                    {% if check_error %}
-                        <div class="error-box" style="margin-top:16px;">{{ check_error }}</div>
-                    {% endif %}
-
-                    {% if check_result %}
-                        <div class="entry" style="margin-top:16px;">
-                            <div class="author">{{ check_result.author }}</div>
-                            <div class="text">{{ check_result.text }}</div>
-                            {% if check_result.reply %}
-                                <div class="badge badge-{{ check_result.verdict|lower|replace(' ', '') }}">{{ check_result.verdict }}</div>
-                                {% if check_result.severity %}<span class="badge severity-{{ check_result.severity|lower }}">{{ check_result.severity }} RISK</span>{% endif %}
-                                <div class="reply">{{ check_result.reply }}</div>
-                                {% if check_result.sources %}
-                                    <div class="sources">Sources:
-                                        {% for url in check_result.sources %}<a href="{{ url }}" target="_blank">[{{ loop.index }}]</a>{% endfor %}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="skipped">— No factual claim detected in this post —</div>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                </div>
+            <!-- MANUAL -->
+            <div id="manual" class="section">
+                <h2>Manual Check</h2>
             </div>
 
             <!-- REPORTS -->
-            <div class="section" id="reports">
-                <div class="panel-header">
-                    <h1>Reports</h1>
-                    <p>Export your full fact-check history</p>
-                </div>
-                <div class="card-light">
-                    <p style="color:#6b7280; margin-bottom:16px; font-size:14px;">Download every logged post, verdict, severity rating, and source as a CSV file — open it in Excel, Google Sheets, or any spreadsheet tool.</p>
-                    <a href="/export" class="btn">⬇ Export CSV Report</a>
-                </div>
+            <div id="reports" class="section">
+                <h2>Reports</h2>
             </div>
 
         </div>
     </div>
+
 </div>
 
 <script>
 function showSection(id, el) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
     document.getElementById(id).classList.add('active');
     el.classList.add('active');
 }
 
-// Risk gauge (half-doughnut)
+/* SAFE JS VALUES (prevents syntax crash) */
+const falsePct = Number("{{ stats.false_pct or 0 }}");
+
+/* FIXED CHART */
 new Chart(document.getElementById('riskGauge'), {
     type: 'doughnut',
     data: {
         datasets: [{
-            data: [{{ stats.false_pct }}, {{ 100 - stats.false_pct }}],
-            backgroundColor: ['#ef4444', '#e5e7eb'],
-            borderWidth: 0
+            data: [falsePct, 100 - falsePct],
+            backgroundColor: ['#ef4444', '#e5e7eb']
         }]
     },
     options: {
         rotation: -90,
         circumference: 180,
-        cutout: '75%',
-        plugins: { legend: { display: false }, tooltip: { enabled: false } }
-    }
-});
-
-{% if trend.dates|length > 0 %}
-new Chart(document.getElementById('trendChart'), {
-    type: 'line',
-    data: {
-        labels: {{ trend.dates|tojson }},
-        datasets: [
-            { label: 'True', data: {{ trend.true|tojson }}, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.08)', tension: 0.3 },
-            { label: 'False', data: {{ trend.false|tojson }}, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.08)', tension: 0.3 },
-            { label: 'Partly True', data: {{ trend.partly|tojson }}, borderColor: '#ca8a04', backgroundColor: 'rgba(202,138,4,0.08)', tension: 0.3 }
-        ]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { labels: { color: '#374151' } } },
-        scales: {
-            x: { ticks: { color: '#9ca3af' }, grid: { color: '#f0f0f3' } },
-            y: { ticks: { color: '#9ca3af' }, grid: { color: '#f0f0f3' }, beginAtZero: true }
+        cutout: '70%',
+        plugins: {
+            legend: { display: false }
         }
     }
 });
-{% endif %}
 </script>
+
 </body>
 </html>
